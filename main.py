@@ -163,6 +163,8 @@ search_input = WebDriverWait(driver, timeout).until(
 )
 sleepy_send_keys(search_input, query, min_sleep, max_sleep)
 
+print(f'Searching for "{query}".')
+
 # organize results
 try:
     view_int = int(view_options)
@@ -178,6 +180,7 @@ result_limiter = WebDriverWait(driver, timeout).until(
 )
 # view options provided as strings (not integers)
 sleepy_select_by_value(result_limiter, str(view_options), min_sleep, max_sleep)
+print(f"Viewing {view_options} per page.")
 
 try:
     # wait for URL to change
@@ -201,6 +204,7 @@ result_sorter = WebDriverWait(driver, timeout).until(
     EC.element_to_be_clickable((By.ID, "sortBy"))
 )
 sleepy_select_by_value(result_sorter, sort_results, min_sleep, max_sleep)
+print(f'Sorting results by "{sort_results}".')
 
 try:
     # wait for URL to change
@@ -422,12 +426,14 @@ status_counts = Counter(
 # update run_data
 run_data["counts"].update(status_counts)
 
-print("Status Counts:")
+print("Summary by Status:")
 for status, count in run_data["counts"].items():
-    print(f"  {status.capitalize()}: {count}")
+    print(f'  "{status.capitalize()}": {count}')
 
 # safe write of the run
 write_json_atomic(run_path, run_data)
+print(f'Run saved to "{run_path}".')
 
 # safe rewrite of the results
 write_json_atomic(records_path, records)
+print(f'Records saved to "{records_path}".')

@@ -1,5 +1,6 @@
 import os
 
+from collections import Counter
 from datetime import datetime
 from dotenv import load_dotenv
 from pathlib import Path
@@ -74,7 +75,7 @@ records_path = data_dir / "records.json"
 runs_dir = data_dir / "runs"
 runs_dir.mkdir(parents=True, exist_ok=True)
 
-run_time_format = "%m-%d-%Y %H:%M:%S"
+run_time_format = "%Y-%m-%d %H:%M:%S"
 safe_time_format = "%Y-%m-%d_%H-%M-%S"
 
 tz_info = ZoneInfo("America/New_York")
@@ -145,7 +146,7 @@ while keep_alive:
         profile_uid = int(profile_url.split("/")[4])
 
         # creation time
-        creation_time = datetime.now(ZoneInfo("America/New_York")).strftime(run_time_format)
+        creation_time = datetime.now(tz_info).strftime(run_time_format)
 
         # instantiate a record of the profile
         alum_record = AlumniProfile(
@@ -158,7 +159,7 @@ while keep_alive:
         )
 
         # tailor the messageg
-        greeting = f"Hi {alum_record.name},\n"
+        greeting = f"Hi {alum_record.name},\n\n"
         tailored_message = greeting + message
 
         try:
@@ -274,9 +275,25 @@ driver.close()
 # save the run
 run_end_time = datetime.now(tz_info)
 elapsed_time = run_end_time - run_start_time
+elapsed_time_rounded = round(elapsed_time.total_seconds(), 2)
+
+print(f"Run complete in {elapsed_time_rounded} seconds.")
 
 run_data["ended_at"] = run_end_time.strftime(run_time_format)
-run_data["time_elapsed"] = round(elapsed_time.total_seconds(), 2)
+run_data["time_elapsed"] = elapsed_time_rounded
+
+# count statuses
+status_counts = Counter(
+    result.get("status", "").lower() 
+    for result in run_data["results"].values()
+)
+
+# update run_data
+run_data["counts"].update(status_counts)
+
+print("Status Counts:")
+for status, count in run_data["counts"].items():
+    print(f"  {status.capitalize()}: {count}")
 
 # safe write of the run
 write_json_atomic(run_path, run_data)

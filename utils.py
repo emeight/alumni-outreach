@@ -176,7 +176,7 @@ def load_records(path: Path) -> Dict[int, Dict[str, Any]]:
         return {}
 
 
-def record_result(records: Dict[int, Dict[str, Any]], alum: AlumniProfile) -> Dict[str, Any]:
+def record_result(records: Dict[int, Dict[str, Any]], alum: AlumniProfile) -> Dict[int, Dict[str, Any]]:
     """Record an AlumniProfile instance in the records dictionary as a plain dict.
 
     Parameters
@@ -189,7 +189,7 @@ def record_result(records: Dict[int, Dict[str, Any]], alum: AlumniProfile) -> Di
 
     Returns
     -------
-    Dict[str, Any]
+    Dict[int, Dict[str, Any]]
         Dictionary instance of the record.
 
     """
@@ -215,7 +215,7 @@ def record_result(records: Dict[int, Dict[str, Any]], alum: AlumniProfile) -> Di
     return new_rec
 
 
-def write_json_atomic(path: Path, data: Dict[str, Dict[str, Any]]) -> None:
+def write_json_atomic(path: Path, data: Dict[int, Dict[str, Any]]) -> None:
     """Atomically write JSON to `path` (safe on POSIX/NTFS)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", delete=False, dir=path.parent, encoding="utf-8") as tmp:

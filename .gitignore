@@ -1,5 +1,9 @@
 # ignore environment variables
 .env
 
-# ignore the records files
-records/
+# ignore data
+data/
+
+# don't upload pycache
+__pycache__/
+*.pyc

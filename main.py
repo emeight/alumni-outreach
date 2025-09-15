@@ -10,7 +10,7 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from utils import (
     AlumniProfile,
@@ -26,11 +26,19 @@ from utils import (
 # load environment variables
 load_dotenv()
 
+alumni_dir_url = os.getenv("ALUMNI_DIR_URL")
+
+data_dir_path = os.getenv("DATA_DIR")
+
+username = os.getenv("USERNAME")
+password = os.getenv("PASSWORD")
+
 query = os.getenv("QUERY")
+view_options = os.getenv("VIEW_OPTIONS")
+sort_results = os.getenv("SORT_RESULTS")
+
 subject = os.getenv("SUBJECT")
 message = os.getenv("MESSAGE")
-data_dir_path = os.getenv("DATA_DIR")
-alumni_dir_url = os.getenv("ALUMNI_DIR_URL")
 
 # get max emails
 max_emails = 10  # default
@@ -110,6 +118,155 @@ print(f'Please login and enter your query. \nThis script will takeover once the 
 WebDriverWait(driver, 180).until(
     lambda d: d.current_url.startswith(query_url)
 )
+
+# login user
+print(f'Logging in via: "{driver.title}".')
+if username is None:
+    err_msg = "USERNAME environment variable is not set."
+    raise ValueError(err_msg)
+
+if password is None:
+    err_msg = "PASSWORD environment variable is not set."
+    raise ValueError(err_msg)
+
+username_input = WebDriverWait(driver, timeout).until(
+    EC.presence_of_element_located((By.ID, "identifier"))
+)
+username_input.clear()
+username_input.send_keys(username)
+
+sleep_randomly(min_sleep, max_sleep)
+
+login_btn = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="save"]'))
+)
+login_btn.click()
+
+password_input = WebDriverWait(driver, timeout).until(
+    EC.presence_of_element_located((By.ID, "credentials.passcode"))
+)
+password_input.clear()
+password_input.send_keys(password)
+
+sleep_randomly(min_sleep, max_sleep)
+
+continue_btn = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="save"]'))
+)
+continue_btn.click()
+
+print("Login successful, awaiting multi-factor authentication.")
+
+mfa_element = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.XPATH, '//button[normalize-space()="Verify"]'))
+)
+mfa_element.click()
+
+print("MFA request sent, please approve on your device.")
+dont_trust_browser_btn = WebDriverWait(driver, 300).until(
+    EC.element_to_be_clickable((By.ID, "dont-trust-browser-button"))
+)
+print("Multi-factor authentication approved.")
+sleep_randomly(min_sleep, max_sleep)
+dont_trust_browser_btn.click()
+
+dont_stay_signed_in_btn = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="do-not-stay-signed-in-btn"]'))
+)
+sleep_randomly(min_sleep, max_sleep)
+dont_stay_signed_in_btn.click()
+
+print("Successfully accessed the alumni directory.")
+
+# keyword search
+search_input = WebDriverWait(driver, timeout).until(
+    EC.presence_of_element_located((By.ID, "searchForText"))
+)
+search_input.clear()
+search_input.send_keys(query)
+sleep_randomly(min_sleep, max_sleep)
+search_input.submit()
+
+# organize results
+try:
+    view_int = int(view_options)
+    # number of results per page, must be one of {10, 25, 50}
+    view_options = view_int if view_int in {10, 25, 50} else 50
+except ValueError:
+    # defaults to 50
+    view_options = 50
+
+pre_limit_select_url = driver.current_url
+result_limiter = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.ID, "limit"))
+)
+result_limiter_selector = Select(result_limiter)
+# view options provided as strings (not integers)
+result_limiter_selector.select_by_value(str(view_options))
+
+try:
+    # wait for URL to change
+    WebDriverWait(driver, timeout).until(
+        lambda driver: driver.current_url != pre_limit_select_url
+    )
+except TimeoutException:
+    # if the page doesn't reload (i.e., selecting default value)
+    pass
+
+try:
+    sort_str = str(sort_results)
+    # method to sort the query, must be one of {}"relevance", "lastName", "firstName", "classyear", "lastLogin"}
+    valid_sorts = {"relevance", "lastName", "firstName", "classyear", "lastLogin"}
+    sort_results = sort_str if sort_str in valid_sorts else "lastName"
+except (ValueError, TypeError, AttributeError):
+    sort_results = "lastName"
+
+pre_sort_select_url = driver.current_url
+result_sorter = WebDriverWait(driver, timeout).until(
+    EC.element_to_be_clickable((By.ID, "sortBy"))
+)
+result_sorter_selector = Select(result_sorter)
+result_sorter_selector.select_by_value(str(sort_results))
+
+try:
+    # wait for URL to change
+    WebDriverWait(driver, timeout).until(
+        lambda driver: driver.current_url != pre_sort_select_url
+    )
+except TimeoutException:
+    # if the page doesn't reload (i.e., selecting default value)
+    pass
+
+# open "Advanced Search Options"
+advanced_link = driver.find_element(By.CSS_SELECTOR, "a.hu2020-top-extra__collapser")
+if advanced_link.get_attribute("aria-expanded") == "false":
+    advanced_link.click()
+    WebDriverWait(driver, 5).until(
+        EC.visibility_of_element_located((By.ID, "facet-deceased"))
+    )
+
+# exclude deceased alumni
+pre_deceseased_sort_url = driver.current_url
+checkbox = driver.find_element(By.ID, "facet-deceased")
+if not checkbox.is_selected():
+    # select the checkbox
+    checkbox.click()
+    
+    # the url should change here
+    try:
+        # wait for URL to change
+        WebDriverWait(driver, timeout).until(
+            lambda driver: driver.current_url != pre_deceseased_sort_url
+        )
+    except TimeoutException:
+        # if the page doesn't reload (i.e., selecting default value)
+        pass
+else:
+    # close "Advanced Search Options"
+    if advanced_link.get_attribute("aria-expanded") == "true":
+        advanced_link.click()
+
+sleep_randomly(min_sleep, max_sleep)
 
 keep_alive = True
 emails_sent = 0

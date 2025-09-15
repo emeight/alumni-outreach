@@ -10,7 +10,7 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select, WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait
 
 from utils import (
     AlumniProfile,
@@ -20,6 +20,9 @@ from utils import (
     record_result,
     send_from_modal,
     sleep_randomly,
+    sleepy_click,
+    sleepy_select_by_value,
+    sleepy_send_keys,
     write_json_atomic
 )
 
@@ -126,28 +129,12 @@ if password is None:
 username_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "identifier"))
 )
-username_input.clear()
-sleep_randomly(min_sleep, max_sleep)
-username_input.send_keys(username)
-sleep_randomly(min_sleep, max_sleep)
-
-login_btn = WebDriverWait(driver, timeout).until(
-    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="save"]'))
-)
-login_btn.click()
+sleepy_send_keys(username_input, username, min_sleep, max_sleep)
 
 password_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "credentials.passcode"))
 )
-password_input.clear()
-sleep_randomly(min_sleep, max_sleep)
-password_input.send_keys(password)
-sleep_randomly(min_sleep, max_sleep)
-
-continue_btn = WebDriverWait(driver, timeout).until(
-    EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="save"]'))
-)
-continue_btn.click()
+sleepy_send_keys(password_input, password, min_sleep, max_sleep)
 
 print("Login successful, awaiting multi-factor authentication.")
 
@@ -161,14 +148,12 @@ dont_trust_browser_btn = WebDriverWait(driver, 300).until(
     EC.element_to_be_clickable((By.ID, "dont-trust-browser-button"))
 )
 print("Multi-factor authentication approved.")
-sleep_randomly(min_sleep, max_sleep)
-dont_trust_browser_btn.click()
+sleepy_click(dont_trust_browser_btn, min_sleep, max_sleep)
 
 dont_stay_signed_in_btn = WebDriverWait(driver, timeout).until(
     EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-se="do-not-stay-signed-in-btn"]'))
 )
-sleep_randomly(min_sleep, max_sleep)
-dont_stay_signed_in_btn.click()
+sleepy_click(dont_stay_signed_in_btn, min_sleep, max_sleep)
 
 print("Successfully accessed the alumni directory.")
 
@@ -176,11 +161,7 @@ print("Successfully accessed the alumni directory.")
 search_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "searchForText"))
 )
-search_input.clear()
-sleep_randomly(min_sleep, max_sleep)
-search_input.send_keys(query)
-sleep_randomly(min_sleep, max_sleep)
-search_input.submit()
+sleepy_send_keys(search_input, query, min_sleep, max_sleep)
 
 # organize results
 try:
@@ -195,9 +176,8 @@ pre_limit_select_url = driver.current_url
 result_limiter = WebDriverWait(driver, timeout).until(
     EC.element_to_be_clickable((By.ID, "limit"))
 )
-result_limiter_selector = Select(result_limiter)
 # view options provided as strings (not integers)
-result_limiter_selector.select_by_value(str(view_options))
+sleepy_select_by_value(result_limiter, str(view_options), min_sleep, max_sleep)
 
 try:
     # wait for URL to change
@@ -220,8 +200,7 @@ pre_sort_select_url = driver.current_url
 result_sorter = WebDriverWait(driver, timeout).until(
     EC.element_to_be_clickable((By.ID, "sortBy"))
 )
-result_sorter_selector = Select(result_sorter)
-result_sorter_selector.select_by_value(str(sort_results))
+sleepy_select_by_value(result_sorter, sort_results, min_sleep, max_sleep)
 
 try:
     # wait for URL to change
@@ -235,7 +214,7 @@ except TimeoutException:
 # open "Advanced Search Options"
 advanced_link = driver.find_element(By.CSS_SELECTOR, "a.hu2020-top-extra__collapser")
 if advanced_link.get_attribute("aria-expanded") == "false":
-    advanced_link.click()
+    sleepy_click(advanced_link, min_sleep, max_sleep)
     WebDriverWait(driver, 5).until(
         EC.visibility_of_element_located((By.ID, "facet-deceased"))
     )
@@ -245,7 +224,7 @@ pre_deceseased_sort_url = driver.current_url
 checkbox = driver.find_element(By.ID, "facet-deceased")
 if not checkbox.is_selected():
     # select the checkbox
-    checkbox.click()
+    sleepy_click(checkbox, min_sleep, max_sleep)
     
     # the url should change here
     try:
@@ -259,9 +238,7 @@ if not checkbox.is_selected():
 else:
     # close "Advanced Search Options"
     if advanced_link.get_attribute("aria-expanded") == "true":
-        advanced_link.click()
-
-sleep_randomly(min_sleep, max_sleep)
+        sleepy_click(advanced_link, min_sleep, max_sleep)
 
 keep_alive = True
 emails_sent = 0
@@ -281,7 +258,7 @@ while keep_alive:
     for idx, card in enumerate(cards, start=1):
         # ensure we have not hit the maximum
         if emails_sent >= max_emails:
-            print(f"Maximum number of sent emails has been reached ({max_emails}).")
+            print(f"Maximum number of emails ({max_emails}) have been sent.")
             keep_alive = False
             break  # break inner (card) loop
 
@@ -326,8 +303,7 @@ while keep_alive:
                 By.XPATH,
                 ".//a[@data-ace-email and contains(text(), 'Email')]"
             )
-            sleep_randomly(min_sleep, max_sleep)
-            quicksend_btn.click()
+            sleepy_click(quicksend_btn, min_sleep, max_sleep, after=False)
 
             # send email
             send_from_modal(driver, subject, tailored_message)
@@ -344,8 +320,7 @@ while keep_alive:
                 profile_link = WebDriverWait(driver, timeout).until(
                     EC.element_to_be_clickable((By.XPATH, f"//a[@href='/person/{alum_record.uid}']"))
                 )
-                sleep_randomly(min_sleep, max_sleep)
-                profile_link.click()
+                sleepy_click(profile_link, min_sleep, max_sleep, after=False)
 
                 # wait for URL
                 WebDriverWait(driver, timeout).until(
@@ -374,8 +349,7 @@ while keep_alive:
                         ".//ul[contains(@class,'list-unstyled')]//a[1]"
                     ))
                 )
-                sleep_randomly(min_sleep, max_sleep)
-                first_email_link.click()
+                sleepy_click(first_email_link, min_sleep, max_sleep, after=False)
 
                 # send email
                 send_from_modal(driver, subject, tailored_message)
@@ -411,7 +385,7 @@ while keep_alive:
         break  # break the outer (page) loop
 
     if emails_sent >= max_emails:
-        print(f"Maximum number of sent emails has been reached ({max_emails}).")
+        print(f"Maximum number of emails ({max_emails}) have been sent.")
         keep_alive = False
         break
 
@@ -420,8 +394,7 @@ while keep_alive:
         next_link = WebDriverWait(driver, timeout).until(
             EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next Page']"))
         )
-        sleep_randomly(min_sleep, max_sleep)
-        next_link.click()
+        sleepy_click(next_link, min_sleep, max_sleep, after=False)
     except TimeoutException:
         print("Results exhausted.")
         keep_alive = False

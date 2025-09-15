@@ -14,8 +14,9 @@ from zoneinfo import ZoneInfo
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 
 @dataclass
@@ -49,6 +50,107 @@ def sleep_randomly(min_time: Union[int, float] = 0, max_time: Union[int, float] 
 
     """
     time.sleep(random.uniform(*map(float, sorted((min_time, max_time)))))
+
+
+def sleepy_click(web_element: WebElement, min_time: Union[int, float] = 0, max_time: Union[int, float] = 0, before: bool = True, after: bool = True) -> None:
+    """Sleep for a random amount of time before and after clicking a web element.
+    
+    Parameters
+    ----------
+    web_element : WebElement
+        Selenium WebElement to click.
+
+    min_time : Union[int, float]
+        Minimum number of seconds to sleep for.
+    
+    max_time : Union[int, float]
+        Maximum number of seconds to sleep for.
+
+    before : bool
+        Whether or not to sleep before.
+        Defaults to True.
+
+    after : bool
+        Whether or not to sleep after.
+        Defaults to True.
+
+    """
+    if before:
+        sleep_randomly(min_time, max_time)
+    web_element.click()
+    if after:
+        sleep_randomly(min_time, max_time)
+
+
+def sleepy_send_keys(web_element: WebElement, keys: str, min_time: Union[int, float] = 0, max_time: Union[int, float] = 0, before: bool = True, after: bool = True) -> None:
+    """Sleep for a random amount of time before and after sending keys to a web element.
+    
+    Parameters
+    ----------
+    web_element : WebElement
+        Selenium WebElement to click.
+
+    keys : str
+        Text to send to the web_element.
+
+    min_time : Union[int, float]
+        Minimum number of seconds to sleep for.
+    
+    max_time : Union[int, float]
+        Maximum number of seconds to sleep for.
+
+    before : bool
+        Whether or not to sleep before.
+        Defaults to True.
+
+    after : bool
+        Whether or not to sleep after.
+        Defaults to True.
+
+    """
+    web_element.clear()
+    if before:
+        sleep_randomly(min_time, max_time)
+    web_element.send_keys(keys)
+    if after:
+        sleep_randomly(min_time, max_time)
+    web_element.submit()
+
+
+def sleepy_select_by_value(web_element: WebElement, selection: Union[int, float, str], min_time: Union[int, float] = 0, max_time: Union[int, float] = 0, before: bool = True, after: bool = True) -> None:
+    """Sleep for a random amount of time before and after selecting an option from a web element.
+    
+    Wraps a WebElement in a Select object then attempts to select the value provided.
+
+    Parameters
+    ----------
+    web_element : WebElement
+        Selenium WebElement to select.
+
+    selection : Union[int, float, str]
+        Value to select.
+
+    min_time : Union[int, float]
+        Minimum number of seconds to sleep for.
+    
+    max_time : Union[int, float]
+        Maximum number of seconds to sleep for.
+
+    before : bool
+        Whether or not to sleep before.
+        Defaults to True.
+
+    after : bool
+        Whether or not to sleep after.
+        Defaults to True.
+
+    """
+    selector = Select(web_element)
+    if before:
+        sleep_randomly(min_time, max_time)
+    selector.select_by_value(selection)
+    if after:
+        sleep_randomly(min_time, max_time)
 
 
 def condense_alumni_name(full_name: str) -> str:

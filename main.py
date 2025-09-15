@@ -14,6 +14,7 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 
 from utils import (
     AlumniProfile,
+    condense_alumni_name,
     load_records,
     lookup_alum,
     record_result,
@@ -112,15 +113,8 @@ driver = webdriver.Chrome()
 driver.get(alumni_dir_url)
 print(f'Successfully accessed "{alumni_dir_url}".')
 
-# wait until the user provides the query
-query_url = alumni_dir_url + "query"
-print(f'Please login and enter your query. \nThis script will takeover once the url starts with "{query_url}".')
-WebDriverWait(driver, 180).until(
-    lambda d: d.current_url.startswith(query_url)
-)
-
 # login user
-print(f'Logging in via: "{driver.title}".')
+print("Logging in.")
 if username is None:
     err_msg = "USERNAME environment variable is not set."
     raise ValueError(err_msg)
@@ -133,8 +127,8 @@ username_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "identifier"))
 )
 username_input.clear()
+sleep_randomly(min_sleep, max_sleep)
 username_input.send_keys(username)
-
 sleep_randomly(min_sleep, max_sleep)
 
 login_btn = WebDriverWait(driver, timeout).until(
@@ -146,8 +140,8 @@ password_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "credentials.passcode"))
 )
 password_input.clear()
+sleep_randomly(min_sleep, max_sleep)
 password_input.send_keys(password)
-
 sleep_randomly(min_sleep, max_sleep)
 
 continue_btn = WebDriverWait(driver, timeout).until(
@@ -183,6 +177,7 @@ search_input = WebDriverWait(driver, timeout).until(
     EC.presence_of_element_located((By.ID, "searchForText"))
 )
 search_input.clear()
+sleep_randomly(min_sleep, max_sleep)
 search_input.send_keys(query)
 sleep_randomly(min_sleep, max_sleep)
 search_input.submit()
@@ -192,7 +187,7 @@ try:
     view_int = int(view_options)
     # number of results per page, must be one of {10, 25, 50}
     view_options = view_int if view_int in {10, 25, 50} else 50
-except ValueError:
+except (ValueError, TypeError):
     # defaults to 50
     view_options = 50
 
@@ -315,8 +310,9 @@ while keep_alive:
             updated_at=creation_time,
         )
 
-        # tailor the messageg
-        greeting = f"Hi {alum_record.name},\n\n"
+        # tailor the message
+        alum_name_condensed = condense_alumni_name(alum_record.name)
+        greeting = f"Hi {alum_name_condensed},\n\n"
         tailored_message = greeting + message
 
         try:
@@ -413,6 +409,11 @@ while keep_alive:
 
     if not keep_alive:
         break  # break the outer (page) loop
+
+    if emails_sent >= max_emails:
+        print(f"Maximum number of sent emails has been reached ({max_emails}).")
+        keep_alive = False
+        break
 
     try:
         # go to the next page of results

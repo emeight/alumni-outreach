@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+import regex as re
 from typing import Any, Dict, Literal, Union
 from zoneinfo import ZoneInfo
 
@@ -48,6 +49,67 @@ def sleep_randomly(min_time: Union[int, float] = 0, max_time: Union[int, float] 
 
     """
     time.sleep(random.uniform(*map(float, sorted((min_time, max_time)))))
+
+
+def condense_alumni_name(full_name: str) -> str:
+    """Remove all extra elements of an alumni's name besides their title and last name.
+    
+    Parameters
+    ----------
+    full_name : str
+        Alumni's full name with title (i.e. "Mr. Jack Black").
+
+    Returns
+    -------
+    str
+        Simplified string to title + last name (i.e. "Mr. Black").
+
+    """
+    # normalize whitespace
+    name = full_name.strip()
+
+    # remove suffixes (Jr, Sr, III, MD, etc.)
+    name = re.sub(
+        r'[,\s]+(Jr|Sr|I{1,3}|IV|V|VI|VII|VIII|IX|X|PhD|MD|DDS|JD|Esq|CPA|RN|DVM)\.?$',
+        '',
+        name,
+        flags=re.IGNORECASE,
+    )
+
+    parts = name.split()
+    if not parts:
+        return None
+
+    # define titles
+    special_titles = {
+        'dr', 'prof', 'professor', 'rev', 'reverend', 'hon', 'honorable', 
+        'sir', 'dame', 'lord', 'lady', 'capt', 'captain', 'col', 'colonel', 
+        'maj', 'major', 'gen', 'general', 'lt', 'lieutenant', 'sgt', 'sergeant'
+    }
+    basic_titles = {'mr', 'mrs', 'ms', 'miss'}
+
+    # find a title (prefer special, then basic, else first name)
+    title = None
+    for part in parts:
+        clean = part.lower().rstrip(".,")
+        if clean in special_titles or clean in basic_titles:
+            # preserve period if present, else add it for abbreviated titles
+            if part.endswith("."):
+                title = part
+            elif clean in {"dr", "mr", "mrs", "ms"}:
+                title = part + "."
+            else:
+                title = part
+            break
+
+    # last word is last name (after suffix removal)
+    last_name = parts[-1].rstrip(".,")
+    
+    if not title:
+        # return first name if no title
+        return parts[0]
+    
+    return title + " " + last_name
 
 
 def send_from_modal(driver: WebDriver, subject: str, message: str, send_copy: bool = True, timeout: int = 15)-> None:

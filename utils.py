@@ -170,6 +170,9 @@ def condense_alumni_name(full_name: str) -> str:
     # normalize whitespace
     name = full_name.strip()
 
+    # remove anything in parentheses
+    name = re.sub(r'\([^)]*\)', '', name)
+
     # remove suffixes (Jr, Sr, III, MD, etc.)
     name = re.sub(
         r'[,\s]+(Jr|Sr|I{1,3}|IV|V|VI|VII|VIII|IX|X|PhD|MD|DDS|JD|Esq|CPA|RN|DVM)\.?$',
@@ -177,6 +180,9 @@ def condense_alumni_name(full_name: str) -> str:
         name,
         flags=re.IGNORECASE,
     )
+
+    # clean up any extra whitespace after removals
+    name = ' '.join(name.split())
 
     parts = name.split()
     if not parts:

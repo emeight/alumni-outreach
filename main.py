@@ -331,7 +331,7 @@ while keep_alive:
                 WebDriverWait(driver, timeout).until(
                     EC.url_contains(f"/person/{alum_record.uid}")
                 )
-            except (TimeoutError, NoSuchElementException):
+            except (TimeoutException, NoSuchElementException):
                 # alumni profile inaccessible (remain on results page)
                 continue
 
@@ -371,7 +371,7 @@ while keep_alive:
                 # go back to the results page
                 driver.back()
 
-            except (TimeoutError, NoSuchElementException):
+            except (TimeoutException, NoSuchElementException):
                 # unable to send, entry marked as "Viewed"
                 driver.back()  # revert to results page
                 continue

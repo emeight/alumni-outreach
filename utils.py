@@ -25,7 +25,7 @@ class AlumniProfile:
     url: str
     # records key
     uid: int
-    # sent (successfully sent), viewed (couldn't send), skipped (sent before)
+    # sent (successfully sent), viewed (couldn't send), skipped (seen before)
     status: Literal["sent", "viewed", "skipped"]
     # time data
     created_at : str 

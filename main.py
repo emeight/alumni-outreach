@@ -87,8 +87,8 @@ records_path = data_dir / "records.json"
 runs_dir = data_dir / "runs"
 runs_dir.mkdir(parents=True, exist_ok=True)
 
-run_time_format = "%Y-%m-%d %H:%M:%S"
-safe_time_format = "%Y-%m-%d_%H-%M-%S"
+run_time_format = "%m-%d-%Y %H:%M:%S"
+safe_time_format = "%m-%d-%Y_%H-%M-%S"
 
 tz_info = ZoneInfo("America/New_York")
 run_start_time = datetime.now(tz_info)

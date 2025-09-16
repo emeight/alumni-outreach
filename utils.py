@@ -266,7 +266,7 @@ def send_from_modal(driver: WebDriver, subject: str, message: str, send_copy: bo
     send_button = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn.btn-ace-primary.btn-sm.btn-wide[type='submit']"))
     )
-    send_button.click()
+    sleepy_click(send_button, 2, 3)
 
     # close the modal
     try:

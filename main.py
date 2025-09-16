@@ -63,7 +63,7 @@ elif max_emails == 100:
     print("Number provided was greater than 100, defaulting to 100 (maximum).")
 
 # get jitter factor
-jitter_factor = jitter_factor or 1.0  # defaults to 1.0 if not provided
+jitter_factor = jitter_factor or 1.0  # defaults to 1.0
 if jitter_factor < 0:
     print(f"Negatives are not allowed, assuming a jitter factor of {abs(jitter_factor)}")
     jitter_factor = abs(jitter_factor)

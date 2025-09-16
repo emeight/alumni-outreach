@@ -34,6 +34,8 @@ alumni_dir_url = os.getenv("ALUMNI_DIR_URL")
 
 data_dir_path = os.getenv("DATA_DIR")
 
+jitter_factor = os.getenv("JITTER")
+
 username = os.getenv("USERNAME")
 password = os.getenv("PASSWORD")
 
@@ -60,16 +62,8 @@ if max_emails == 0:
 elif max_emails == 100:
     print("Number provided was greater than 100, defaulting to 100 (maximum).")
 
-# get jitter factor  
-jitter_factor = 1.0  # default
-try:
-    jitter_factor = float(input("Jitter (float >= 0): "))
-except ValueError:
-    try:
-        jitter_factor = float(input("Try again (float >= 0): "))
-    except ValueError:
-        print("Defaulting jitter factor to 1.")
-
+# get jitter factor
+jitter_factor = jitter_factor or 1.0  # defaults to 1.0 if not provided
 if jitter_factor < 0:
     print(f"Negatives are not allowed, assuming a jitter factor of {abs(jitter_factor)}")
     jitter_factor = abs(jitter_factor)

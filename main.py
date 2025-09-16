@@ -109,7 +109,7 @@ run_data = {
         "viewed": 0,
         "skipped": 0,
     },
-    "results": {},
+    "results": {},  # mapping: uid (int) -> result fields for this run
 }
 
 # initialize the webdriver
@@ -379,7 +379,7 @@ while keep_alive:
         finally:
             # record the result
             fields = record_result(records, alum_record)
-            run_data["results"][idx] = fields
+            run_data["results"][alum_record.uid] = fields
 
             # pretty print the result
             max_key_len = max(len(k) for k in fields)
@@ -425,12 +425,17 @@ run_data["time_elapsed"] = elapsed_time_rounded
 
 # count statuses
 status_counts = Counter(
-    result.get("status", "").lower() 
-    for result in run_data["results"].values()
+    r["status"].lower()
+    for r in run_data["results"].values()
+    if r.get("status")
 )
 
-# update run_data
-run_data["counts"].update(status_counts)
+# update run data
+run_data["counts"] = {
+    "sent":    status_counts.get("sent", 0),
+    "viewed":  status_counts.get("viewed", 0),
+    "skipped": status_counts.get("skipped", 0),
+}
 
 print("Summary by Status:")
 for status, count in run_data["counts"].items():

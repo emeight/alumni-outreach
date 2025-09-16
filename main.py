@@ -96,6 +96,7 @@ run_path = runs_dir / f"{run_start_time.strftime(safe_time_format)}.json"
 
 # load existing records
 records = load_records(records_path)
+print(f"Loaded {len(list(records.keys()))} existing alumni records.")
 
 # run-specific metadata setup
 run_data = {
@@ -320,7 +321,7 @@ while keep_alive:
         except NoSuchElementException:
             # no quicksend button on this card
             try:
-                # try to send from profile
+                # try to access the alumni's profile
                 profile_link = WebDriverWait(driver, timeout).until(
                     EC.element_to_be_clickable((By.XPATH, f"//a[@href='/person/{alum_record.uid}']"))
                 )
@@ -330,7 +331,11 @@ while keep_alive:
                 WebDriverWait(driver, timeout).until(
                     EC.url_contains(f"/person/{alum_record.uid}")
                 )
+            except (TimeoutError, NoSuchElementException):
+                # alumni profile inaccessible (remain on results page)
+                continue
 
+            try:
                 # wait for the contact section (may not exist)
                 WebDriverWait(driver, timeout).until(
                     EC.presence_of_element_located((By.XPATH, "//section[@id='profileContact']"))
@@ -368,6 +373,7 @@ while keep_alive:
 
             except (TimeoutError, NoSuchElementException):
                 # unable to send, entry marked as "Viewed"
+                driver.back()  # revert to results page
                 continue
         
         finally:

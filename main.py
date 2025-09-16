@@ -180,7 +180,7 @@ result_limiter = WebDriverWait(driver, timeout).until(
 )
 # view options provided as strings (not integers)
 sleepy_select_by_value(result_limiter, str(view_options), min_sleep, max_sleep)
-print(f"Viewing {view_options} per page.")
+print(f"Viewing {view_options} results per page.")
 
 try:
     # wait for URL to change

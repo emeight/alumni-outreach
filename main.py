@@ -317,7 +317,11 @@ while keep_alive:
 
             # jitter
             sleep_randomly(min_sleep, max_sleep)
-
+        except RuntimeError as e:
+            if "daily email limit" in str(e).lower():
+                print("Daily email limit reached.")
+                keep_alive = False
+                break
         except NoSuchElementException:
             # no quicksend button on this card
             try:
@@ -361,7 +365,14 @@ while keep_alive:
                 sleepy_click(first_email_link, min_sleep, max_sleep, after=False)
 
                 # send email
-                send_from_modal(driver, subject, tailored_message)
+                try:
+                    send_from_modal(driver, subject, tailored_message)
+                except RuntimeError as e:
+                    if "daily email limit" in str(e).lower():
+                        print("Daily email limit reached.")
+                        keep_alive = False
+                        break
+
                 alum_record.status = "sent"
                 emails_sent += 1
 
@@ -377,19 +388,21 @@ while keep_alive:
                 continue
         
         finally:
-            # record the result
-            fields = record_result(records, alum_record)
-            run_data["results"][alum_record.uid] = fields
+            # only record result if still alive
+            if keep_alive:
+                # record the result
+                fields = record_result(records, alum_record)
+                run_data["results"][alum_record.uid] = fields
 
-            # pretty print the result
-            max_key_len = max(len(k) for k in fields)
-            max_val_len = max(len(str(v)) for v in fields.values())
-            box_width = max_key_len + max_val_len + 5
+                # pretty print the result
+                max_key_len = max(len(k) for k in fields)
+                max_val_len = max(len(str(v)) for v in fields.values())
+                box_width = max_key_len + max_val_len + 5
 
-            print("+" + ("-" * box_width) + "+")
-            for k, v in fields.items():
-                print(f"| {k:<{max_key_len}} : {v:<{max_val_len}} |")
-            print("+" + ("-" * box_width) + "+")
+                print("+" + ("-" * box_width) + "+")
+                for k, v in fields.items():
+                    print(f"| {k:<{max_key_len}} : {v:<{max_val_len}} |")
+                print("+" + ("-" * box_width) + "+")
 
     if not keep_alive:
         break  # break the outer (page) loop

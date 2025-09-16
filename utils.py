@@ -244,11 +244,27 @@ def send_from_modal(driver: WebDriver, subject: str, message: str, send_copy: bo
         Seconds to wait for presence and clickability of elements.
         Defaults to 15.
 
+    Raises
+    ------
+    RuntimeError
+        If daily email limit has been reached.
+
     """
-    # subject
-    subject_input = WebDriverWait(driver, timeout).until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR, "input#subject"))
-    )
+    try:
+        # subject
+        subject_input = WebDriverWait(driver, timeout).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "input#subject"))
+        )
+    except TimeoutException:
+        try:
+            # check if we've reached the limit
+            WebDriverWait(driver, timeout).until(
+                EC.presence_of_element_located((By.XPATH, "//div[contains(@class,'modal-content')]//h4[normalize-space()='Limit Reached']"))
+            )
+            raise RuntimeError("Daily email limit reached.")
+        except TimeoutException:
+            raise  # real timeout, not limit reached
+
     subject_input.click()
     subject_input.clear()
     subject_input.send_keys(subject)

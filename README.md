@@ -10,7 +10,6 @@ If you're in a hurry to get things moving, follow the steps below:
 
     ```
     poetry install
-    poetry shell
     ```
 
 2. Create a .env file

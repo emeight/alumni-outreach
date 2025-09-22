@@ -39,7 +39,7 @@ If you're in a hurry to get things moving, follow the steps below:
 
 3. Run the script
     ```
-    python main.py
+    poetry run python main.py
     ```
 
 4. Specify quantity of emails to send (max 100)

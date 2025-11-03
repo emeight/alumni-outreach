@@ -245,219 +245,222 @@ else:
     if advanced_link.get_attribute("aria-expanded") == "true":
         sleepy_click(advanced_link, min_sleep, max_sleep)
 
-keep_alive = True
-emails_sent = 0
+try:
+    keep_alive = True
+    emails_sent = 0
 
-while keep_alive:
-    # wait until the search-results container is present
-    search_results = WebDriverWait(driver, timeout).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "search-results"))
-    )
-
-    # wait until there is at least one card inside it
-    cards = WebDriverWait(driver, timeout).until(
-        EC.presence_of_all_elements_located((By.CLASS_NAME, "card-and-gutter"))
-    )
-
-    # iterate over each card
-    for idx, card in enumerate(cards, start=1):
-        # ensure we have not hit the maximum
-        if emails_sent >= max_emails:
-            print(f"Maximum number of emails ({max_emails}) have been sent.")
-            keep_alive = False
-            break  # break inner (card) loop
-
-        # grab important card elements
-        link_elem = WebDriverWait(card, timeout).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".card__name a"))
+    while keep_alive:
+        # wait until the search-results container is present
+        search_results = WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "search-results"))
         )
 
-        # extract attributes
-        profile_name = link_elem.text.strip()
-        profile_url = link_elem.get_attribute("href")
-
-        # url structured as "/person/12345"
-        profile_uid = int(profile_url.split("/")[4])
-
-        # creation time
-        creation_time = datetime.now(tz_info).strftime(run_time_format)
-
-        # instantiate a record of the profile
-        alum_record = AlumniProfile(
-            name=profile_name,
-            url=profile_url,
-            uid=profile_uid,
-            status="viewed",
-            created_at=creation_time,
-            updated_at=creation_time,
+        # wait until there is at least one card inside it
+        cards = WebDriverWait(driver, timeout).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "card-and-gutter"))
         )
 
-        # tailor the message
-        alum_name_condensed = condense_alumni_name(alum_record.name)
-        greeting = f"Hi {alum_name_condensed},\n\n"
-        tailored_message = greeting + message
-
-        try:
-            # check if we've seen this alumni before
-            if lookup_alum(records, alum_record):
-                alum_record.status = "skipped"
-                continue
-
-            # check if the quicksend is present
-            quicksend_btn = card.find_element(
-                By.XPATH,
-                ".//a[@data-ace-email and contains(text(), 'Email')]"
-            )
-            sleepy_click(quicksend_btn, min_sleep, max_sleep, after=False)
-
-            # send email
-            send_from_modal(driver, subject, tailored_message)
-            alum_record.status = "sent"
-            emails_sent += 1
-
-            # jitter
-            sleep_randomly(min_sleep, max_sleep)
-        except RuntimeError as e:
-            if "daily email limit" in str(e).lower():
-                print("Daily email limit reached.")
+        # iterate over each card
+        for idx, card in enumerate(cards, start=1):
+            # ensure we have not hit the maximum
+            if emails_sent >= max_emails:
+                print(f"Maximum number of emails ({max_emails}) have been sent.")
                 keep_alive = False
-                break
-        except NoSuchElementException:
-            # no quicksend button on this card
+                break  # break inner (card) loop
+
+            # grab important card elements
+            link_elem = WebDriverWait(card, timeout).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".card__name a"))
+            )
+
+            # extract attributes
+            profile_name = link_elem.text.strip()
+            profile_url = link_elem.get_attribute("href")
+
+            # url structured as "/person/12345"
+            profile_uid = int(profile_url.split("/")[4])
+
+            # creation time
+            creation_time = datetime.now(tz_info).strftime(run_time_format)
+
+            # instantiate a record of the profile
+            alum_record = AlumniProfile(
+                name=profile_name,
+                url=profile_url,
+                uid=profile_uid,
+                status="viewed",
+                created_at=creation_time,
+                updated_at=creation_time,
+            )
+
+            # tailor the message
+            alum_name_condensed = condense_alumni_name(alum_record.name)
+            greeting = f"Hi {alum_name_condensed},\n\n"
+            tailored_message = greeting + message
+
             try:
-                # try to access the alumni's profile
-                profile_link = WebDriverWait(driver, timeout).until(
-                    EC.element_to_be_clickable((By.XPATH, f"//a[@href='/person/{alum_record.uid}']"))
-                )
-                sleepy_click(profile_link, min_sleep, max_sleep, after=False)
+                # check if we've seen this alumni before
+                if lookup_alum(records, alum_record):
+                    alum_record.status = "skipped"
+                    continue
 
-                # wait for URL
-                WebDriverWait(driver, timeout).until(
-                    EC.url_contains(f"/person/{alum_record.uid}")
+                # check if the quicksend is present
+                quicksend_btn = card.find_element(
+                    By.XPATH,
+                    ".//a[@data-ace-email and contains(text(), 'Email')]"
                 )
-            except (TimeoutException, NoSuchElementException):
-                # alumni profile inaccessible (remain on results page)
-                continue
-
-            try:
-                # wait for the contact section (may not exist)
-                WebDriverWait(driver, timeout).until(
-                    EC.presence_of_element_located((By.XPATH, "//section[@id='profileContact']"))
-                )
-
-                # locate the 'Email Addresses' subsection
-                subsection = WebDriverWait(driver, timeout).until(
-                    EC.presence_of_element_located((
-                        By.XPATH,
-                        # find the profile-subsection whose <h6> header is exactly "Email Addresses"
-                        "//section[@id='profileContact']"
-                        "//section[contains(@class,'profile-subsection')][.//h6[normalize-space()='Email Addresses']]"
-                    ))
-                )
-
-                # find the first <a> in the list under that subsection
-                first_email_link = WebDriverWait(subsection, timeout).until(
-                    EC.element_to_be_clickable((
-                        By.XPATH,
-                        ".//ul[contains(@class,'list-unstyled')]//a[1]"
-                    ))
-                )
-                sleepy_click(first_email_link, min_sleep, max_sleep, after=False)
+                sleepy_click(quicksend_btn, min_sleep, max_sleep, after=False)
 
                 # send email
-                try:
-                    send_from_modal(driver, subject, tailored_message)
-                except RuntimeError as e:
-                    if "daily email limit" in str(e).lower():
-                        print("Daily email limit reached.")
-                        keep_alive = False
-                        break
-
+                send_from_modal(driver, subject, tailored_message)
                 alum_record.status = "sent"
                 emails_sent += 1
 
                 # jitter
                 sleep_randomly(min_sleep, max_sleep)
+            except RuntimeError as e:
+                if "daily email limit" in str(e).lower():
+                    print("Daily email limit reached.")
+                    keep_alive = False
+                    break
+            except NoSuchElementException:
+                # no quicksend button on this card
+                try:
+                    # try to access the alumni's profile
+                    profile_link = WebDriverWait(driver, timeout).until(
+                        EC.element_to_be_clickable((By.XPATH, f"//a[@href='/person/{alum_record.uid}']"))
+                    )
+                    sleepy_click(profile_link, min_sleep, max_sleep, after=False)
 
-                # go back to the results page
-                driver.back()
+                    # wait for URL
+                    WebDriverWait(driver, timeout).until(
+                        EC.url_contains(f"/person/{alum_record.uid}")
+                    )
+                except (TimeoutException, NoSuchElementException):
+                    # alumni profile inaccessible (remain on results page)
+                    continue
 
-            except (TimeoutException, NoSuchElementException):
-                # unable to send, entry marked as "Viewed"
-                driver.back()  # revert to results page
-                continue
-        
-        finally:
-            # only record result if still alive
-            if keep_alive:
-                # record the result
-                fields = record_result(records, alum_record)
-                run_data["results"][alum_record.uid] = fields
+                try:
+                    # wait for the contact section (may not exist)
+                    WebDriverWait(driver, timeout).until(
+                        EC.presence_of_element_located((By.XPATH, "//section[@id='profileContact']"))
+                    )
 
-                # pretty print the result
-                max_key_len = max(len(k) for k in fields)
-                max_val_len = max(len(str(v)) for v in fields.values())
-                box_width = max_key_len + max_val_len + 5
+                    # locate the 'Email Addresses' subsection
+                    subsection = WebDriverWait(driver, timeout).until(
+                        EC.presence_of_element_located((
+                            By.XPATH,
+                            # find the profile-subsection whose <h6> header is exactly "Email Addresses"
+                            "//section[@id='profileContact']"
+                            "//section[contains(@class,'profile-subsection')][.//h6[normalize-space()='Email Addresses']]"
+                        ))
+                    )
 
-                print("+" + ("-" * box_width) + "+")
-                for k, v in fields.items():
-                    print(f"| {k:<{max_key_len}} : {v:<{max_val_len}} |")
-                print("+" + ("-" * box_width) + "+")
+                    # find the first <a> in the list under that subsection
+                    first_email_link = WebDriverWait(subsection, timeout).until(
+                        EC.element_to_be_clickable((
+                            By.XPATH,
+                            ".//ul[contains(@class,'list-unstyled')]//a[1]"
+                        ))
+                    )
+                    sleepy_click(first_email_link, min_sleep, max_sleep, after=False)
 
-    if not keep_alive:
-        break  # break the outer (page) loop
+                    # send email
+                    try:
+                        send_from_modal(driver, subject, tailored_message)
+                    except RuntimeError as e:
+                        if "daily email limit" in str(e).lower():
+                            print("Daily email limit reached.")
+                            keep_alive = False
+                            break
 
-    if emails_sent >= max_emails:
-        print(f"Maximum number of emails ({max_emails}) have been sent.")
-        keep_alive = False
-        break
+                    alum_record.status = "sent"
+                    emails_sent += 1
 
-    try:
-        # go to the next page of results
-        next_link = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next Page']"))
-        )
-        sleepy_click(next_link, min_sleep, max_sleep, after=False)
-    except TimeoutException:
-        print("Results exhausted.")
-        keep_alive = False
+                    # jitter
+                    sleep_randomly(min_sleep, max_sleep)
 
+                    # go back to the results page
+                    driver.back()
 
-# shutdown the driver
-driver.close()
+                except (TimeoutException, NoSuchElementException):
+                    # unable to send, entry marked as "Viewed"
+                    driver.back()  # revert to results page
+                    continue
+            
+            finally:
+                # only record result if still alive
+                if keep_alive:
+                    # record the result
+                    fields = record_result(records, alum_record)
+                    run_data["results"][alum_record.uid] = fields
 
-# save the run
-run_end_time = datetime.now(tz_info)
-elapsed_time = run_end_time - run_start_time
-elapsed_time_rounded = round(elapsed_time.total_seconds(), 2)
+                    # pretty print the result
+                    max_key_len = max(len(k) for k in fields)
+                    max_val_len = max(len(str(v)) for v in fields.values())
+                    box_width = max_key_len + max_val_len + 5
 
-print(f"Run complete in {elapsed_time_rounded} seconds.")
+                    print("+" + ("-" * box_width) + "+")
+                    for k, v in fields.items():
+                        print(f"| {k:<{max_key_len}} : {v:<{max_val_len}} |")
+                    print("+" + ("-" * box_width) + "+")
 
-run_data["ended_at"] = run_end_time.strftime(run_time_format)
-run_data["time_elapsed"] = elapsed_time_rounded
+        if not keep_alive:
+            break  # break the outer (page) loop
 
-# count statuses
-status_counts = Counter(
-    r["status"].lower()
-    for r in run_data["results"].values()
-    if r.get("status")
-)
+        if emails_sent >= max_emails:
+            print(f"Maximum number of emails ({max_emails}) have been sent.")
+            keep_alive = False
+            break
 
-# update run data
-run_data["counts"] = {
-    "sent":    status_counts.get("sent", 0),
-    "viewed":  status_counts.get("viewed", 0),
-    "skipped": status_counts.get("skipped", 0),
-}
+        try:
+            # go to the next page of results
+            next_link = WebDriverWait(driver, timeout).until(
+                EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next Page']"))
+            )
+            sleepy_click(next_link, min_sleep, max_sleep, after=False)
+        except TimeoutException:
+            print("Results exhausted.")
+            keep_alive = False
+except Exception as e:
+    print(f"Encountered an unexpected exception: {e}")
+finally:
+    print("Shutting down")
+    # shutdown the driver
+    driver.close()
 
-print("Summary by Status:")
-for status, count in run_data["counts"].items():
-    print(f'  "{status.capitalize()}": {count}')
+    # save the run
+    run_end_time = datetime.now(tz_info)
+    elapsed_time = run_end_time - run_start_time
+    elapsed_time_rounded = round(elapsed_time.total_seconds(), 2)
 
-# safe write of the run
-write_json_atomic(run_path, run_data)
-print(f'Run saved to "{run_path}".')
+    print(f"Run complete in {elapsed_time_rounded} seconds.")
 
-# safe rewrite of the results
-write_json_atomic(records_path, records)
-print(f'Records saved to "{records_path}".')
+    run_data["ended_at"] = run_end_time.strftime(run_time_format)
+    run_data["time_elapsed"] = elapsed_time_rounded
+
+    # count statuses
+    status_counts = Counter(
+        r["status"].lower()
+        for r in run_data["results"].values()
+        if r.get("status")
+    )
+
+    # update run data
+    run_data["counts"] = {
+        "sent":    status_counts.get("sent", 0),
+        "viewed":  status_counts.get("viewed", 0),
+        "skipped": status_counts.get("skipped", 0),
+    }
+
+    print("Summary by Status:")
+    for status, count in run_data["counts"].items():
+        print(f'  "{status.capitalize()}": {count}')
+
+    # safe write of the run
+    write_json_atomic(run_path, run_data)
+    print(f'Run saved to "{run_path}".')
+
+    # safe rewrite of the results
+    write_json_atomic(records_path, records)
+    print(f'Records saved to "{records_path}".')

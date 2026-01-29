@@ -177,7 +177,7 @@ except (ValueError, TypeError):
 
 pre_limit_select_url = driver.current_url
 result_limiter = WebDriverWait(driver, timeout).until(
-    EC.element_to_be_clickable((By.ID, "limit"))
+    EC.element_to_be_clickable((By.ID, "perPageLimit"))
 )
 # view options provided as strings (not integers)
 sleepy_select_by_value(result_limiter, str(view_options), min_sleep, max_sleep)
@@ -194,7 +194,7 @@ except TimeoutException:
 
 try:
     sort_str = str(sort_results)
-    # method to sort the query, must be one of {}"relevance", "lastName", "firstName", "classyear", "lastLogin"}
+    # method to sort the query, must be one of {"relevance", "lastName", "firstName", "classyear", "lastLogin"}
     valid_sorts = {"relevance", "lastName", "firstName", "classyear", "lastLogin"}
     sort_results = sort_str if sort_str in valid_sorts else "lastName"
 except (ValueError, TypeError, AttributeError):
@@ -216,34 +216,25 @@ except TimeoutException:
     # if the page doesn't reload (i.e., selecting default value)
     pass
 
-# open "Advanced Search Options"
-advanced_link = driver.find_element(By.CSS_SELECTOR, "a.hu2020-top-extra__collapser")
-if advanced_link.get_attribute("aria-expanded") == "false":
+try:
+    # open "Advanced Search Options"
+    advanced_link = driver.find_element(By.CSS_SELECTOR, "button.js-filter-results-btn")
     sleepy_click(advanced_link, min_sleep, max_sleep)
     WebDriverWait(driver, 5).until(
-        EC.visibility_of_element_located((By.ID, "facet-deceased"))
+        EC.visibility_of_element_located((By.ID, "deceasedFlagExclude"))
     )
 
-# exclude deceased alumni
-pre_deceseased_sort_url = driver.current_url
-checkbox = driver.find_element(By.ID, "facet-deceased")
-if not checkbox.is_selected():
-    # select the checkbox
-    sleepy_click(checkbox, min_sleep, max_sleep)
-    
-    # the url should change here
-    try:
-        # wait for URL to change
-        WebDriverWait(driver, timeout).until(
-            lambda driver: driver.current_url != pre_deceseased_sort_url
-        )
-    except TimeoutException:
-        # if the page doesn't reload (i.e., selecting default value)
-        pass
-else:
-    # close "Advanced Search Options"
-    if advanced_link.get_attribute("aria-expanded") == "true":
-        sleepy_click(advanced_link, min_sleep, max_sleep)
+    # exclude deceased alumni
+    pre_deceseased_sort_url = driver.current_url
+    exclude_deceased_btn = driver.find_element(By.ID, "deceasedFlagExclude")
+    exclude_deceased_btn.click()
+except (NoSuchElementException, TimeoutError):
+    # unable to do advanced filtering, proceed
+    pass
+
+# search
+search_btn = driver.find_element(By.ID, "addToFilterCriteria")
+sleepy_click(search_btn, min_sleep, max_sleep)
 
 try:
     keep_alive = True

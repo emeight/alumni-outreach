@@ -409,7 +409,8 @@ try:
             next_link = WebDriverWait(driver, timeout).until(
                 EC.element_to_be_clickable((By.XPATH, "//a[@aria-label='Next Page']"))
             )
-            sleepy_click(next_link, min_sleep, max_sleep, after=False)
+            href = next_link.get_attribute("href")  # ensure link is valid
+            driver.get(href)
         except TimeoutException:
             print("Results exhausted.")
             keep_alive = False

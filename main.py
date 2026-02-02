@@ -228,6 +228,10 @@ try:
     pre_deceseased_sort_url = driver.current_url
     exclude_deceased_btn = driver.find_element(By.ID, "deceasedFlagExclude")
     exclude_deceased_btn.click()
+
+    # specify query in professional information
+    professional_info_field = driver.find_element(By.ID, "profInfoSearchInput")
+    sleepy_send_keys(professional_info_field, query, min_sleep, max_sleep) 
 except (NoSuchElementException, TimeoutError):
     # unable to do advanced filtering, proceed
     pass

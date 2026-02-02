@@ -231,7 +231,8 @@ try:
 
     # specify query in professional information
     professional_info_field = driver.find_element(By.ID, "profInfoSearchInput")
-    sleepy_send_keys(professional_info_field, query, min_sleep, max_sleep) 
+    professional_info_field.clear()
+    professional_info_field.send_keys(query)
 except (NoSuchElementException, TimeoutError):
     # unable to do advanced filtering, proceed
     pass
